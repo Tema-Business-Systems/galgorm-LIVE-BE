@@ -86,12 +86,12 @@ public class AsyncSchdulerService {
 
     private static String SITE_DATE = "d.SITE IN {0} AND d.DOCDATE = ''{1}''";
 
-    private static String SITE_DATE_OPENRANGE = "d.SITE IN {0} AND ( d.DOCDATE =  ''{1}''  OR ( DLVYSTATUS IN (0,8) AND d.DOCTYPE = ''PICK'' AND d.DOCDATE <  ''{1}'' ) ) ORDER BY d.DOCDATE, d.TRIPNO, d.SEQ ASC";
+    private static String SITE_DATE_OPENRANGE = "d.SITE IN {0} AND ( d.DOCDATE =  ''{1}''  OR ( DLVYSTATUS IN (0,8) AND (d.DOCTYPE = ''PICK'' OR d.DOCTYPE = ''RETURN'') AND d.DOCDATE <  ''{1}'' ) ) ORDER BY d.DOCDATE, d.TRIPNO, d.SEQ ASC";
 
 
     private static String SITE_DATERANGE = "d.SITE IN {0} AND d.DOCDATE BETWEEN  ''{1}'' AND ''{2}'' order by d.DOCDATE, d.TRIPNO, d.SEQ";
 
-    private static String SITE_DATERANGE_OPENRANGE = "d.SITE IN {0} AND ( d.DOCDATE BETWEEN  ''{1}'' AND ''{2}'' OR ( DLVYSTATUS IN (0,8) AND d.DOCTYPE = ''PICK'' AND d.DOCDATE NOT BETWEEN  ''{1}'' AND ''{2}'') ) ORDER BY d.DOCDATE, d.TRIPNO, d.SEQ ASC";
+    private static String SITE_DATERANGE_OPENRANGE = "d.SITE IN {0} AND ( d.DOCDATE BETWEEN  ''{1}'' AND ''{2}'' OR ( DLVYSTATUS IN (0,8) AND (d.DOCTYPE = ''PICK'' OR d.DOCTYPE = ''RETURN'') AND d.DOCDATE NOT BETWEEN  ''{1}'' AND ''{2}'') ) ORDER BY d.DOCDATE, d.TRIPNO, d.SEQ ASC";
 
 
     private static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
@@ -772,6 +772,7 @@ public class AsyncSchdulerService {
         dropsVO.setVehClassList(this.convertToString(drops.get("VEHCLASSLIST")));
         dropsVO.setPriorityOrder(this.convertToString(drops.get("PRIORITYORDER")));
         dropsVO.setPriority((short) drops.get("PRIORITY"));
+        dropsVO.setReschFlg((int) drops.get("RESCHFLG"));
         dropsVO.setPicker(this.convertToString(drops.get("PICKER")));
         dropsVO.setPrelistCode(this.convertToString(drops.get("PRELISTCODE")));
         dropsVO.setFromTime(this.convertToString(drops.get("FROMTIME")));

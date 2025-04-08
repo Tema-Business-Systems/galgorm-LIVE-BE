@@ -29,6 +29,7 @@ public class DocsVO {
       private String vehClassList;
       private String priorityOrder;
       private int priority;
+      private int reschFlg;
       private String fromTime;
       private String toTime;
       private String availDays;

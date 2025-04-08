@@ -180,4 +180,6 @@ public class Docs {
       private String Height;
       @Column(name= "LoadingOrder")
       private String LoadingOrder;
+      @Column(name= "RESCHFLG")
+      private int reschFlg;
 }
