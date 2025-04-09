@@ -772,7 +772,7 @@ public class AsyncSchdulerService {
         dropsVO.setVehClassList(this.convertToString(drops.get("VEHCLASSLIST")));
         dropsVO.setPriorityOrder(this.convertToString(drops.get("PRIORITYORDER")));
         dropsVO.setPriority((short) drops.get("PRIORITY"));
-        dropsVO.setReschFlg((int) drops.get("RESCHFLG"));
+        dropsVO.setReschFlg((short) drops.get("RESCHFLG"));
         dropsVO.setPicker(this.convertToString(drops.get("PICKER")));
         dropsVO.setPrelistCode(this.convertToString(drops.get("PRELISTCODE")));
         dropsVO.setFromTime(this.convertToString(drops.get("FROMTIME")));
