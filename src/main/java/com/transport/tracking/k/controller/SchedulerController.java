@@ -18,7 +18,7 @@ import java.util.*;
 
 @Slf4j
 @RestController
-@CrossOrigin(origins={"http://localhost:3000","http://localhost:8084","http://localhost:8083","https://10.254.26.108:8083","https://10.254.26.108:8084","http://10.254.26.108:8083","http://10.254.26.108:8084","http://routeplanner-galgorm.cpio.cloud:8083","http://routeplanner-galgorm.cpio.cloud:8084"})
+@CrossOrigin(origins={"http://localhost:3000","http://localhost:8084","http://localhost:8083","https://10.254.26.108:8083","https://10.254.26.108:8084","http://10.254.26.108:8083","http://10.254.26.108:8084","http://routeplanner-galgorm.cpio.cloud:8083","http://routeplanner-galgorm.cpio.cloud:8084","https://routeplanner-galgorm.cpio.cloud:8083","https://routeplanner-galgorm.cpio.cloud:8084"})
 @RequestMapping ("/api/v1/scheduler")
 public class SchedulerController {
 

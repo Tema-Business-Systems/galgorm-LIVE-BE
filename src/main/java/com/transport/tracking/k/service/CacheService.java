@@ -263,7 +263,9 @@ public class CacheService {
                 if(VO.getSdhnum() != null) {
 
                     item.setDocumentNo(VO.getSdhnum());
-                    if(VO.getXdoctyp().equalsIgnoreCase("4")) {
+                 if ("4".equalsIgnoreCase(VO.getXdoctyp())) {
+                    String vrd_dlvflg_status = VO.getPickTcktStatus();
+                     if (vrd_dlvflg_status != null) {
                         switch (VO.getPickTcktStatus()) {
                             case "1":
                                 item.setDocumentStatus("In Process");
@@ -281,6 +283,10 @@ public class CacheService {
                                 break;
 
                         }
+                     }
+                      else {
+            item.setDocumentStatus("Unknown"); // Or "Not Available"
+        }
                     }
                     Docs.add(item);
                 }

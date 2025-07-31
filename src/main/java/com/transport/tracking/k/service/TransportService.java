@@ -136,8 +136,9 @@ public class TransportService {
      private String UPDATE_doc_QUERY_AT_TripCreation = "update {0}.{1} set {2} = ''{6}'' , {3} = ''{7}'', {5} = {10}, {11} = ''{8}'',{12}={13},{14} = {15}, {16} = ''{17}''  where {4} = ''{9}''";
     private String UPDATE_doc_QUERY_AT_TripCreation_pickticket = "update {0}.{1} set {2} = ''{6}'' , {3} = ''{7}'', {5} = {10}, {11} = ''{8}'',{12}={13},{14} = {15}, {16} = ''{17}'', {18} = ''{20}'', {19} = ''{8}''  where {4} = ''{9}''";
 
-    private String UPDATE_doc_QUERY = "update {0}.{1} set {2} = ''{12}'' , {3} = ''{13}'', {4} = ''{14}'', {5} = ''{15}'',{7} = ''{17}'',{8} =''{29}'',{9} =''{30}'',{10} =''{19}'',{11} =''{20}'',{21}=''{22}'',{23}=''{24}'',{25}=''{26}'',{27} = {28}, {31} = ''{32}'' where {6} = ''{16}''";
-    private String UPDATE_doc_QUERY_PICK = "update {0}.{1} set {2} = ''{12}'' , {3} = ''{13}'', {4} = ''{14}'', {5} = ''{15}'',{7} = ''{17}'',{8} =''{29}'',{9} =''{30}'',{10} =''{19}'',{11} =''{20}'',{21}=''{22}'',{23}=''{24}'',{25}=''{26}'',{27} = {28}, {31} = ''{32}'', {33} = ''{35}'', {34} = ''{18}'' where {6} = ''{16}''";
+    private String UPDATE_doc_QUERY = "update {0}.{1} set {2} = ''{12}'' , {3} = ''{13}'', {4} = ''{14}'', {5} = ''{15}'',{7} = ''{17}'',{8} =''{29}'',{9} =''{30}'',{11} =''{20}'',{21}=''{22}'',{23}=''{24}'',{25}=''{26}'',{27} = {28}, {31} = ''{32}'' where {6} = ''{16}''";
+//    private String UPDATE_doc_QUERY = "update {0}.{1} set {2} = ''{12}'' , {3} = ''{13}'', {4} = ''{14}'', {5} = ''{15}'',{7} = ''{17}'',{8} =''{29}'',{9} =''{30}'',{10} =''{19}'',{11} =''{20}'',{21}=''{22}'',{23}=''{24}'',{25}=''{26}'',{27} = {28}, {31} = ''{32}'' where {6} = ''{16}''";
+    private String UPDATE_doc_QUERY_PICK = "update {0}.{1} set {2} = ''{12}'' , {3} = ''{13}'', {4} = ''{14}'', {5} = ''{15}'',{7} = ''{17}'',{8} =''{29}'',{9} =''{30}'',{11} =''{20}'',{21}=''{22}'',{23}=''{24}'',{25}=''{26}'',{27} = {28}, {31} = ''{32}'', {33} = ''{35}'', {34} = ''{18}'' where {6} = ''{16}''";
 
     private String DELTE_TRIP_QUERY = "delete from {0}.{1} where XNUMPC_0 = ''{2}''";
     private String DELTE_SINGLETRIP_QUERY = "delete from {0}.{1} where TRIPCODE = ''{2}''";
@@ -652,7 +653,8 @@ public class TransportService {
             String docDate = format.format(tripVO.getDocdate());
             String rtnDate = format.format(tripVO.getEndDate());
 			String endDate = format.format(tripVO.getEndDate());
-            String execDate = format.format(tripVO.getDatexec());
+           // String execDate = format.format(tripVO.getDatexec());
+           String execDate = format.format(tripVO.getDatexec() != null ? tripVO.getDatexec() : new Date());
             String RP_user =  "";
             RP_user = tripVO.getLoginUser();
             String vr = tripVO.getItemCode().toString();

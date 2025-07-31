@@ -23,6 +23,7 @@ import java.math.BigDecimal;
 import java.text.MessageFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -90,8 +91,16 @@ public class AsyncSchdulerService {
 
 
     private static String SITE_DATERANGE = "d.SITE IN {0} AND d.DOCDATE BETWEEN  ''{1}'' AND ''{2}'' order by d.DOCDATE, d.TRIPNO, d.SEQ";
+//  date range all documents , to plan out of date range
+//    private static String SITE_DATERANGE_OPENRANGE = "d.SITE IN {0} AND ( d.DOCDATE BETWEEN  ''{1}'' AND ''{2}'' OR ( DLVYSTATUS IN (0,8) AND (d.DOCTYPE = ''PICK'' OR d.DOCTYPE = ''RETURN'') AND d.DOCDATE NOT BETWEEN  ''{1}'' AND ''{2}'') ) ORDER BY d.DOCDATE, d.TRIPNO, d.SEQ ASC";
 
-    private static String SITE_DATERANGE_OPENRANGE = "d.SITE IN {0} AND ( d.DOCDATE BETWEEN  ''{1}'' AND ''{2}'' OR ( DLVYSTATUS IN (0,8) AND (d.DOCTYPE = ''PICK'' OR d.DOCTYPE = ''RETURN'') AND d.DOCDATE NOT BETWEEN  ''{1}'' AND ''{2}'') ) ORDER BY d.DOCDATE, d.TRIPNO, d.SEQ ASC";
+//    private static String SITE_DATERANGE_OPENRANGE = "d.SITE IN {0} AND ( d.DOCDATE BETWEEN  ''{1}'' AND ''{2}'' ORDER BY d.DOCDATE, d.TRIPNO, d.SEQ ASC";
+
+ // only date range
+   // private static String SITE_DATERANGE_OPENRANGE = "d.SITE IN {0} AND d.DOCDATE BETWEEN ''{1}'' AND ''{2}'' ORDER BY d.DOCDATE, d.TRIPNO, d.SEQ ASC";
+
+    // end date = all documents , range - only to plan , out of range- no documents
+    private static String SITE_DATERANGE_OPENRANGE = "d.SITE IN {0} AND ( d.DOCDATE =  ''{2}'' OR (( DLVYSTATUS IN (0,8) AND (d.DOCTYPE = ''PICK'' OR d.DOCTYPE = ''RETURN'') AND d.DOCDATE  BETWEEN  ''{1}'' AND ''{2}''))) ORDER BY d.DOCDATE, d.TRIPNO, d.SEQ ASC";
 
 
     private static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
@@ -607,7 +616,7 @@ public class AsyncSchdulerService {
             resultList = jdbcTemplate.queryForList(MessageFormat.format(DORPS_QUERY, dbSchema,
                     MessageFormat.format(SITE_DATE, Sites, dateFormat.format(date))), paramMap);
            // log.info(resultList);
-          //  drops =  dropsRepository.findByDocdate(date);
+//            drops =  dropsRepository.findByDocdate(date);
 
         }else {
             resultList = jdbcTemplate.queryForList(MessageFormat.format(DORPS_QUERY, dbSchema,
@@ -869,6 +878,19 @@ public class AsyncSchdulerService {
     }
 
 
+    public Date getLastWeekDate(Date selectedDate) {
+        // Create a Calendar instance
+        Calendar calendar = Calendar.getInstance();
+
+        // Set the calendar's time to the selected date
+        calendar.setTime(selectedDate);
+
+        // Subtract 7 days (1 week)
+        calendar.add(Calendar.DATE, -7);
+
+        // Return the new date which is one week back
+        return calendar.getTime();
+    }
 
     public List<DocsVO> getDocsWithSelDate2(List<String> site, Date seldate) {
         List<Docs> drops = null;
@@ -877,10 +899,16 @@ public class AsyncSchdulerService {
         List<Map<String, Object>> resultList2 = new ArrayList<>();
         List<Docs> resultList = new ArrayList<>();
         String Sites =  this.ListtoString(site);
+//        DateUtil dateUtil = new DateUtil();
+        Date lastWeekDate = getLastWeekDate(seldate);
+        log.info(seldate.toString());
+        log.info("above is current selected date");
+        log.info(lastWeekDate.toString());
+        log.info("above is Previous Week date");
         if(!StringUtils.isEmpty(site)) {
             // resultList2 = jdbcTemplate.queryForList(MessageFormat.format(DOCS_QUERY, dbSchema,Sites,dateFormat.format(sdate),dateFormat.format(edate)), paramMap);
             resultList2 = jdbcTemplate.queryForList(MessageFormat.format(DOCS_QUERY2, dbSchema,
-                    MessageFormat.format(SITE_DATE_OPENRANGE, Sites, dateFormat.format(seldate))), paramMap);
+                    MessageFormat.format(SITE_DATERANGE_OPENRANGE, Sites, dateFormat.format(lastWeekDate),dateFormat.format(seldate))), paramMap);
         }else {
             resultList2 = jdbcTemplate.queryForList(MessageFormat.format(DOCS_QUERY2, dbSchema,
                     MessageFormat.format(ONLY_DATE, dateFormat.format(seldate))), paramMap);

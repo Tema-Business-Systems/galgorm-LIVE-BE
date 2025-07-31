@@ -16,6 +16,6 @@ public interface SorderListRepository extends CrudRepository<SorderList, Integer
     public List<SorderList> findAll();
 
 
-    @Query(value="select top 1 * from TEST.X10CSOH c where c.XTSOHNUM_0 = ?1 ORDER BY c.XTLINENUM_0 DESC ",nativeQuery = true)
+    @Query(value="select top 1 * from LIVE.X10CSOH c where c.XTSOHNUM_0 = ?1 ORDER BY c.XTLINENUM_0 DESC ",nativeQuery = true)
     public SorderList getLatestLineNobyOrderNo(String docnum);
 }
