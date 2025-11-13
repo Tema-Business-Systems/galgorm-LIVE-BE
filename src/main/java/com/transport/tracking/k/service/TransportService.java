@@ -2656,15 +2656,26 @@ public class TransportService {
             String trailer = mapper.writeValueAsString(tripVO.getTrialerObject());
             String totalObject = mapper.writeValueAsString(tripVO.getTotalObject());
             String vehicle =  mapper.writeValueAsString(tripVO.getVehicleObject());
-            trip.setPickup(pickUp.replaceAll("'", "''"));
-            trip.setDrop(drop.replaceAll("'", "''"));
-            trip.setEquipment(equipment.replaceAll("'", "''"));
-            trip.setTrialer(trailer.replaceAll("'", "''"));
-            trip.setTotalObject(totalObject.replaceAll("'", "''"));
-            trip.setVehicle(vehicle.replaceAll("'", "''"));
+//            trip.setPickup(pickUp.replaceAll("'", "''"));
+//            trip.setDrop(drop.replaceAll("'", "''"));
+//            trip.setEquipment(equipment.replaceAll("'", "''"));
+//            trip.setTrialer(trailer.replaceAll("'", "''"));
+//            trip.setTotalObject(totalObject.replaceAll("'", "''"));
+//            trip.setVehicle(vehicle.replaceAll("'", "''"));
+            trip.setPickup(escapeOnce(pickUp));
+            trip.setDrop(escapeOnce(drop));
+            trip.setEquipment(escapeOnce(equipment));
+            trip.setTrialer(escapeOnce(trailer));
+            trip.setTotalObject(escapeOnce(totalObject));
+            trip.setVehicle(escapeOnce(vehicle));
         }catch (Exception e) {
             e.printStackTrace();
         }
+    }
+    private String escapeOnce(String input) {
+        if (input == null) return null;
+        if (input.contains("''")) return input;
+        return input.replace("'", "''");
     }
 
     private void restrictsOtherDocuments(TripVO tripVO) {
