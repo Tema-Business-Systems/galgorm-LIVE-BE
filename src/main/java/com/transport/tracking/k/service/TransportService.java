@@ -2532,6 +2532,48 @@ public class TransportService {
     }
 
     private void generateVRCode(String site, Date date, Trip currentTrip) {
+        String dateStr = tripFormat.format(date);
+        Integer maxSuffix = tripRepository.findMaxSuffixForSiteAndDate(site, dateStr);
+        if (maxSuffix == null) {
+            maxSuffix = 0;
+        }
+        int candidate = maxSuffix + 1;
+        final int MAX_TRIES = 1000;
+        int tries = 0;
+
+        String latestTripNumber = null;
+        String seq = null;
+
+        while (tries < MAX_TRIES) {
+            seq = String.format("%03d", candidate);
+            latestTripNumber = MessageFormat.format(TRIP_NUMBER, dateStr, site, seq);
+            Trip existing = tripRepository.findByTripCode(latestTripNumber);
+
+            if (existing == null) {
+                currentTrip.setVrseq(candidate);
+                currentTrip.setTripCode(latestTripNumber);
+                break;
+            }
+            candidate++;
+            tries++;
+        }
+
+        if (tries >= MAX_TRIES) {
+            throw new IllegalStateException(
+                    "Unable to generate unique trip code for site=" + site + " and date=" + dateStr);
+        }
+
+        List<Trip> trips = tripRepository.findBySiteAndDocdateOrderByTripCodeAsc(site, date);
+        int tripC = 0;
+        for (Trip trip : trips) {
+            if (trip.getCode().equalsIgnoreCase(currentTrip.getCode())) {
+                tripC = trip.getTrips();
+            }
+        }
+        currentTrip.setTrips(tripC + 1);
+    }
+
+    private void generateVRCode_old(String site, Date date, Trip currentTrip) {
         List<Trip> trips = tripRepository.findBySiteAndDocdateOrderByTripCodeAsc(site, date);
         int count = 0;
         if (trips.size() > 0) {

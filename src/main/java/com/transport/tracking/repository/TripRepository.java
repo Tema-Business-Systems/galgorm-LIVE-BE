@@ -58,15 +58,12 @@ public interface TripRepository extends CrudRepository<Trip, BigDecimal> {
     public List<Trip> getTripsByCodeAndDocdate(@Param("veh") String veh,@Param("date") String date);
 
 
-
-
-
-
-
-
-
-
-
-
-
+    @Query(
+            value = "SELECT ISNULL(MAX(CAST(RIGHT(c.TRIPCODE, 3) AS INT)), 0) " +
+                    "FROM TEST.XX10TRIPS c " +
+                    "WHERE c.TRIPCODE LIKE 'XVR-' + :dateStr  + :site + '-' + '-%'",
+            nativeQuery = true)
+    Integer findMaxSuffixForSiteAndDate(
+            @Param("site") String site,
+            @Param("dateStr") String dateStr);
 }
