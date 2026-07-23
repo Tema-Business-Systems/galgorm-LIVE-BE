@@ -81,7 +81,7 @@ public class TransportController {
 
     @GetMapping("/sitelist")
     public List<Vehicle> getallvehicles(AccessTokenVO accessTokenVO, @RequestParam(name = "site", required = false) List<String> sites,
-                                    @RequestParam(name = "date", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") Date date)
+                                        @RequestParam(name = "date", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") Date date)
     {
         return transportService.getVehiclebySite(sites,date);
     }
@@ -163,8 +163,14 @@ public class TransportController {
 
 
 
-    @PostMapping ("/trips")
-    public @ResponseBody Map<String, String> submitResponse(@RequestBody List<TripVO> request) throws Exception {
+    @PostMapping ("/trips_old")
+    public @ResponseBody String submitResponse2(@RequestBody List<TripVO> request) throws Exception {
+        return "";
+        // transportService.saveTrip(request);
+    }
+
+    @PostMapping("/trips")
+    public @ResponseBody Map<String, Object> submitResponse(@RequestBody List<TripVO> request) throws Exception {
         return transportService.saveTrip(request);
     }
 
@@ -258,8 +264,8 @@ public class TransportController {
 
     @GetMapping("/drops/panel")
     public DropsPanelVO getDropsPanel(AccessTokenVO accessTokenVO, @RequestParam(name = "site", required = false) List<String> site,
-                                          @RequestParam(name = "date", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") Date date,
-                                          @RequestParam(name = "active", required = false) Boolean active){
+                                      @RequestParam(name = "date", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") Date date,
+                                      @RequestParam(name = "active", required = false) Boolean active){
         if(Objects.isNull(date)) {
             String dateFormate = format.format(new Date());
             try {
@@ -307,7 +313,7 @@ public class TransportController {
 
     @GetMapping("/prevtrpsite")
     public Trip getPrevSiteVehicles(AccessTokenVO accessTokenVO, @RequestParam(name = "veh", required = false) String veh,
-                                      @RequestParam(name = "date", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") Date date){
+                                    @RequestParam(name = "date", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") Date date){
         return transportService.getArrivalSiteforVehice(veh,date);
     }
 
@@ -327,8 +333,8 @@ public class TransportController {
 
     @GetMapping ("/tripslist")
     public @ResponseBody List<Trip_ReportVO> getTripList(AccessTokenVO accessTokenVO,
-                                               @RequestParam(name = "date", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") Date date,
-                                               @RequestParam(name = "active", required = false) Boolean active) throws JsonProcessingException {
+                                                         @RequestParam(name = "date", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") Date date,
+                                                         @RequestParam(name = "active", required = false) Boolean active) throws JsonProcessingException {
         if(Objects.isNull(date)) {
             String dateFormate = format.format(new Date());
             try {
@@ -391,9 +397,9 @@ public class TransportController {
 
     @GetMapping("/opendocsBySiteAndDateRange")
     public List<OpenDocsVO> getDocumentswithRange(AccessTokenVO accessTokenVO, @RequestParam(name = "site", required = false) List<String> site,
-                                               @RequestParam(name = "sdate", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") Date sdate,
-                                               @RequestParam(name = "edate", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") Date edate,
-                                               @RequestParam(name = "active", required = false) Boolean active){
+                                                  @RequestParam(name = "sdate", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") Date sdate,
+                                                  @RequestParam(name = "edate", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") Date edate,
+                                                  @RequestParam(name = "active", required = false) Boolean active){
         List<OpenDocsVO> docsVo = new ArrayList<>();
         if(Objects.isNull(sdate)) {
             String dateFormate = format.format(new Date());
@@ -441,9 +447,9 @@ public class TransportController {
 
     @GetMapping("/opentoadddocsBySiteAndDateRange")
     public List<OpenToAddDocsVO> getToAddDocumentswithRange(AccessTokenVO accessTokenVO, @RequestParam(name = "site", required = false) List<String> site,
-                                                  @RequestParam(name = "sdate", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") Date sdate,
-                                                  @RequestParam(name = "edate", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") Date edate,
-                                                  @RequestParam(name = "active", required = false) Boolean active){
+                                                            @RequestParam(name = "sdate", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") Date sdate,
+                                                            @RequestParam(name = "edate", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") Date edate,
+                                                            @RequestParam(name = "active", required = false) Boolean active){
         List<OpenToAddDocsVO> docsVo = new ArrayList<>();
         if(Objects.isNull(sdate)) {
             String dateFormate = format.format(new Date());

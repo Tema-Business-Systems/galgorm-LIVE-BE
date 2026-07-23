@@ -148,7 +148,7 @@ public class SchedulerController {
 
 
     @PostMapping ("/trips")
-    public @ResponseBody Map<String, String> submitResponse(@RequestBody List<TripVO> request) throws Exception {
+    public @ResponseBody Map<String, Object> submitResponse(@RequestBody List<TripVO> request) throws Exception {
         return transportService.saveTrip(request);
     }
 

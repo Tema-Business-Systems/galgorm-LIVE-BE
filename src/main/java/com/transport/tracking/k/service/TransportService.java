@@ -121,6 +121,13 @@ public class TransportService {
     private String TEXT_CLOB = "{0}{1}";
    // private String SINGLE_DIGIT_VR_NUMBER = "WVR-{0}-{1}-00{2}";
 
+    private String CLAIM_DOC_QUERY =
+            "UPDATE {0}.{1} SET {2} = ''{4}'' WHERE {3} = ''{5}'' AND ({2} IS NULL OR {2} = '''' OR {2} = ''{4}'')";
+
+    // Plain read used only to report the current owner when a claim fails
+    private String SELECT_DOC_OWNER_QUERY =
+            "SELECT {2} FROM {0}.{1} WHERE {3} = ''{4}''";
+
     private String VR_NUMBER = "XVR-{0}-{1}-0{2}";
 	   private String SELECT_LVS_QUERY_2 = "SELECT * FROM {0}.{1} where VCRNUM_0 = ''{2}''";
   private String DELTE_TRIP_QUERY_2 = "delete from {0}.{1} where VCRNUM_0 = ''{2}''";
@@ -237,6 +244,23 @@ public class TransportService {
         }
         return list;
 
+    }
+
+    private static class DocTableMeta {
+        String table;
+        String docIdColumn;
+        String tripLinkColumn = "XX10C_NUMPC_0";
+        DocTableMeta(String t, String c) { this.table = t; this.docIdColumn = c; }
+    }
+
+    private DocTableMeta getDocTableMeta(int docNum) {
+        switch (docNum) {
+            case 1: return new DocTableMeta("SDELIVERY", "SDHNUM_0");
+            case 4: return new DocTableMeta("STOPREH", "PRHNUM_0");
+            case 2: return new DocTableMeta("XX10CREC", "XPTHNUM_0");
+            case 3: return new DocTableMeta("SRETURN", "SRHNUM_0");
+            default: return null;
+        }
     }
 
 
@@ -652,9 +676,9 @@ public class TransportService {
             this.deleteTrip(tripVO.getItemCode());
             String docDate = format.format(tripVO.getDocdate());
             String rtnDate = format.format(tripVO.getEndDate());
-			String endDate = format.format(tripVO.getEndDate());
-           // String execDate = format.format(tripVO.getDatexec());
-           String execDate = format.format(tripVO.getDatexec() != null ? tripVO.getDatexec() : new Date());
+            String endDate = format.format(tripVO.getEndDate());
+            //  String execDate = format.format(tripVO.getDatexec());
+            String execDate = format.format(tripVO.getDatexec() != null ? tripVO.getDatexec() : new Date());
             String RP_user =  "";
             RP_user = tripVO.getLoginUser();
             String vr = tripVO.getItemCode().toString();
@@ -880,38 +904,38 @@ public class TransportService {
         private void InsertintoSalesOrder(Map<String, Object> map, int docType , String date , String Vehicle, String Driver, String RouteNo, String arrtime , String arvdat , String licplate,String routenames) {
 
             if(docType == 4) {
-                 log.info("pick ticket sales order insert");
-                String pcktno =  this.convertToString(map.get("docnum"));
+                log.info("pick ticket sales order insert");
+                String pcktno = this.convertToString(map.get("docnum"));
                 List<String> details = docDsRepository.getOrderNoByDocnum(pcktno);
 
-            if(details.size() > 0) {
+                if (details.size() > 0) {
 
-                for (int i = 0; i < details.size(); i++) {
-                    String detail = details.get(i);
-                if (Objects.nonNull(detail)) {
+                    for (int i = 0; i < details.size(); i++) {
+                        String detail = details.get(i);
+                        if (Objects.nonNull(detail)) {
 
-                    SorderList orderDetails = sorderListRepository.getLatestLineNobyOrderNo(detail);
+                            SorderList orderDetails = sorderListRepository.getLatestLineNobyOrderNo(detail);
 
-                    if (Objects.nonNull(orderDetails)) {
+                            if (Objects.nonNull(orderDetails)) {
 
-                        log.info(Integer.toString(orderDetails.getLineno()));
-                        Integer latestNo = orderDetails.getLineno() + 1000;
-                        String sql = "INSERT INTO " + dbSchema + ".X10CSOH\n" +
-                                "(UPDTICK_0, XTLINENUM_0, XTSOHNUM_0, XTLVSNUM_0, XTSDHNUM_0,  CREUSR_0, UPDUSR_0,  XTPTHNUM_0, XTVEH_0, XTVRNUM_0, XTDRI_0, CREDATTIM_0, UPDDATTIM_0, AUUID_0, X10CROUTNO_0 , X10CARRTIME_0 , XDLVFLG1_0 , X10CSDHDAT_0 , XDLV_STATUS1_0, XX10CVEHREG_0)\n" +
-                                "VALUES(1, " + latestNo + ",'" + detail + "','', '', 'RO', 'RO', '" + map.get("docnum") + "', '" + Vehicle + "', '" + RouteNo + "','" + Driver + "', '" + date + "', '" + date + "', 0,'" + routenames + "','"+arrtime+"',1,'"+arvdat+"',1,'"+licplate+"' )";
-                        entityManager.createNativeQuery(sql).executeUpdate();
-                    } else {
-                        log.info("fresh record");
-                        Integer latestNo = 1000;
-                        String sql = "INSERT INTO " + dbSchema + ".X10CSOH\n" +
-                                "(UPDTICK_0, XTLINENUM_0, XTSOHNUM_0, XTLVSNUM_0, XTSDHNUM_0,  CREUSR_0, UPDUSR_0, XTPTHNUM_0, XTVEH_0, XTVRNUM_0, XTDRI_0, CREDATTIM_0, UPDDATTIM_0, AUUID_0, X10CROUTNO_0 , X10CARRTIME_0 , XDLVFLG1_0 , X10CSDHDAT_0 , XDLV_STATUS1_0, XX10CVEHREG_0)\n" +
-                                "VALUES(1, " + latestNo + ",'" + detail + "','', '', 'RO', 'RO',  '" + map.get("docnum") + "', '" + Vehicle + "', '" + RouteNo + "','" + Driver + "', '" + date + "', '" + date + "', 0, '" + routenames + "','"+arrtime+"',1,'"+arvdat+"',1,'"+licplate+"')";
-                        entityManager.createNativeQuery(sql).executeUpdate();
+                                log.info(Integer.toString(orderDetails.getLineno()));
+                                Integer latestNo = orderDetails.getLineno() + 1000;
+                                String sql = "INSERT INTO " + dbSchema + ".X10CSOH\n" +
+                                        "(UPDTICK_0, XTLINENUM_0, XTSOHNUM_0, XTLVSNUM_0, XTSDHNUM_0,  CREUSR_0, UPDUSR_0,  XTPTHNUM_0, XTVEH_0, XTVRNUM_0, XTDRI_0, CREDATTIM_0, UPDDATTIM_0, AUUID_0, X10CROUTNO_0 , X10CARRTIME_0 , XDLVFLG1_0 , X10CSDHDAT_0 , XDLV_STATUS1_0, XX10CVEHREG_0)\n" +
+                                        "VALUES(1, " + latestNo + ",'" + detail + "','', '', 'RO', 'RO', '" + map.get("docnum") + "', '" + Vehicle + "', '" + RouteNo + "','" + Driver + "', '" + date + "', '" + date + "', 0,'" + routenames + "','" + arrtime + "',1,'" + arvdat + "',1,'" + licplate + "' )";
+                                entityManager.createNativeQuery(sql).executeUpdate();
+                            } else {
+                                log.info("fresh record");
+                                Integer latestNo = 1000;
+                                String sql = "INSERT INTO " + dbSchema + ".X10CSOH\n" +
+                                        "(UPDTICK_0, XTLINENUM_0, XTSOHNUM_0, XTLVSNUM_0, XTSDHNUM_0,  CREUSR_0, UPDUSR_0, XTPTHNUM_0, XTVEH_0, XTVRNUM_0, XTDRI_0, CREDATTIM_0, UPDDATTIM_0, AUUID_0, X10CROUTNO_0 , X10CARRTIME_0 , XDLVFLG1_0 , X10CSDHDAT_0 , XDLV_STATUS1_0, XX10CVEHREG_0)\n" +
+                                        "VALUES(1, " + latestNo + ",'" + detail + "','', '', 'RO', 'RO',  '" + map.get("docnum") + "', '" + Vehicle + "', '" + RouteNo + "','" + Driver + "', '" + date + "', '" + date + "', 0, '" + routenames + "','" + arrtime + "',1,'" + arvdat + "',1,'" + licplate + "')";
+                                entityManager.createNativeQuery(sql).executeUpdate();
 
+                            }
+                        }
                     }
                 }
-            }
-            }
             }
             else {
                 log.info("other documents sales order insert");
@@ -966,7 +990,7 @@ public class TransportService {
                 "AUUID_0, " +
                 "CREUSR_0, " +
                 "UPDUSR_0 )\n" +
-        "VALUES(1,'" + tripVO.getDepSite() + "','" + tripVO.getItemCode() + "',1,'" + docDate + "','" + trailer + "','','" + tripVO.getCode() + "','" + BPTNUM + "','" + tripVO.getDriverId() + "','','','','','','','','','','','ZARCCLIENTRASMQ','ZARCCLIENTRASMP','ZARCCLIENTSDFR1','','','','','','','','" + date + "','" + date + "', 0, '', '')";
+                "VALUES(1,'" + tripVO.getDepSite() + "','" + tripVO.getItemCode() + "',1,'" + docDate + "','" + trailer + "','','" + tripVO.getCode() + "','" + BPTNUM + "','" + tripVO.getDriverId() + "','','','','','','','','','','','ZARCCLIENTRASMQ','ZARCCLIENTRASMP','ZARCCLIENTSDFR1','','','','','','','','" + date + "','" + date + "', 0, '', '')";
 
         entityManager.createNativeQuery(query).executeUpdate();
 
@@ -1036,207 +1060,207 @@ public class TransportService {
 
 
     public void createLoadVehStock(String vr, TripVO tripVO) {
-       try {
-           VehRoute vehroute = vehRouteRepository.findByXnumpc(vr);
-           String LVS,XBPTNUM;
-           int onlyReceipts = 0;
-           String Appuser = "";
-           int XSTOVAL = 0, XVALFLG = 0, XALLFLG = 0, XLOADFLG = 0;
-           Date currentDate = new Date();
-           String DATENOW = format.format(currentDate);
-           log.info("insdie craeteLoadVehStcok");
-           log.info(vehroute.getCodeyve());
-           Date date1 = format.parse(vehroute.getDatliv());
-           XBPTNUM   = vehroute.getBptnum();
-           log.info("date =", date1);
-           Calendar calendar = Calendar.getInstance();
-           calendar.setTime(date1);
-           int year = calendar.get(Calendar.YEAR);
-           int mon = calendar.get(Calendar.MONTH);
-           LVS = this.generateLVScode(vehroute.getFcy(), mon + 1, year);
-           log.info(LVS);
-           int forceseq = 0;
-           if(tripVO.isForceSeq() == true){
-               forceseq = 2;
-           }else{
-               forceseq = 1;
-           }
+        try {
+            VehRoute vehroute = vehRouteRepository.findByXnumpc(vr);
+            String LVS,XBPTNUM;
+            int onlyReceipts = 0;
+            String Appuser = "";
+            int XSTOVAL = 0, XVALFLG = 0, XALLFLG = 0, XLOADFLG = 0;
+            Date currentDate = new Date();
+            String DATENOW = format.format(currentDate);
+            log.info("insdie craeteLoadVehStcok");
+            log.info(vehroute.getCodeyve());
+            Date date1 = format.parse(vehroute.getDatliv());
+            XBPTNUM   = vehroute.getBptnum();
+            log.info("date =", date1);
+            Calendar calendar = Calendar.getInstance();
+            calendar.setTime(date1);
+            int year = calendar.get(Calendar.YEAR);
+            int mon = calendar.get(Calendar.MONTH);
+            LVS = this.generateLVScode(vehroute.getFcy(), mon + 1, year);
+            log.info(LVS);
+            int forceseq = 0;
+            if(tripVO.isForceSeq() == true){
+                forceseq = 2;
+            }else{
+                forceseq = 1;
+            }
 
-           if(tripVO.getDrops() == 0 && tripVO.getPickups() > 0){
-               onlyReceipts = 2;
-               Appuser = vehroute.getDriverid();
-               XSTOVAL = 2;
-               XVALFLG  = 2;
-               XALLFLG = 2;
-               XLOADFLG = 3;
-           }else {
-               onlyReceipts = 1;
-               Appuser = vehroute.getDriverid();
-               XLOADFLG = 1;
-           }
+            if(tripVO.getDrops() == 0 && tripVO.getPickups() > 0){
+                onlyReceipts = 2;
+                Appuser = vehroute.getDriverid();
+                XSTOVAL = 2;
+                XVALFLG  = 2;
+                XALLFLG = 2;
+                XLOADFLG = 3;
+            }else {
+                onlyReceipts = 1;
+                Appuser = vehroute.getDriverid();
+                XLOADFLG = 1;
+            }
 
-           String date = format.format(date1);
-           String query = "INSERT INTO " + dbSchema + ".XX10CLODSTOH\n" +
-                   "(UPDTICK_0, " +
-                   "VCRNUM_0, " +
-                   "BETFCYCOD_0, " +
-                   "STOFCY_0," +
-                   "XDESFCY_0,"+
-                   "PURFCY_0, " +
-                   "SALFCY_0, " +
-                   "FCYADD_0, " +
-                   "BPSNUM_0, " +
-                   "BPSADD_0, " +
-                   "SCOLOC_0, " +
-                   "PJT_0, " +
-                   "BPCNUM_0, " +
-                   "CUR_0, " +
-                   "BETCPY_0, " +
-                   "INVSGH_0, " +
-                   "INVFLG_0, " +
-                   "SIHNUM_0, " +
-                   "FCYDES_0, " +
-                   "IPTDAT_0, " +
-                   "VCRDES_0, " +
-                   "TRSFAM_0, " +
-                   "TRSTYP_0, " +
-                   "TRSCOD_0, " +
-                   "ENTCOD_0, " +
-                   "WRHE_0, " +
-                   "EXPNUM_0, " +
-                   "IMPNUMLIG_0, " +
-                   "CREDAT_0, " +
-                   "CREUSR_0, " +
-                   "UPDDAT_0, " +
-                   "UPDUSR_0, " +
-                   "CREDATTIM_0, " +
-                   "UPDDATTIM_0, " +
-                   "AUUID_0, " +
-                   "CFMFLG_0, " +
-                   "SGHTYP_0, " +
-                   "TMPSGHNUM_0, " +
-                   "MANDOC_0, " +
-                   "ATDTCOD_0, " +
-                   "DPEDAT_0, " +
-                   "ETD_0, " +
-                   "ARVDAT_0, " +
-                   "ETA_0, " +
-                   "LICPLATE_0, " +
-                   "TRLLICPLATE_0, " +
-                   "DRIVERID_0, " +
-                   "XSALEMEN_0, " +
-                   "XOPERATOR_0, " +
-                   "XTECHN_0, " +
-                   "XAPPUSR_0, " +
-                   "XVCRNUM_0, " +
-                   "XRETURNFLG_0, " +
-                   "XACTFLG_0, " +
-                   "XBUSTYP1_0, " +
-                   "XBUSTYP2_0, " +
-                   "XVRSEL_0, " +
-                   "XLOADREF_0, " +
-                   "CODEYVE_0, " +
-                   "XVALFLG_0, " +
-                   "LOCSEL_0, " +
-                   "XROUTNBR_0, " +
-                   "XTEXTNUM_0, " +
-                   "XTOTNONSTK_0, " +
-                   "XCODEYVE_0, " +
-                   "XLOADFLG_0, " +
-                   "X10CHKIN_0, " +
-                   "XXIPTDAT_0, " +
-                   "XSCHREALC_0, " +
-                   "XCAPACITIES_0, " +
-                   "XVEHVOL_0, " +
-                   "XTOTSHESTK_0, " +
-                   "XSEALNUMH_0, " +
-                   "XUNLOADFLG_0, " +
-                   "XSTARTODMTR_0, " +
-                   "XENDODMTR_0, " +
-                   "XCHKINDAT_0, " +
-                   "XCHKINTIM_0, " +
-                   "XCHKOUDAT_0, " +
-                   "XCHKOUTIM_0, " +
-                   "XPMASS_0, " +
-                   "XPVOL_0," +
-                   "XMASS_0," +
-                   "XVMASS_0, " +
-                   "XLMASS_0, " +
-                   "XVOLCAM_0," +
-                   "XVEHV_0," +
-                   "XMPVOL_0," +
-                   "XUNLOADDATE_0," +
-                   "XUNLOADEDBY_0," +
-                   "XUNLOADTIME_0," +
-                   "TRAILER_0," +
-                   "TRAILER_1," +
-                   "TRAILER2_0," +
-                   "XVRDATE_0," +
-                   "XSOURCELOC_0," +
-                   "XLOADBAYD_0," +
-                   "XLOADBAYR_0," +
-                   "XDEVICEID_0," +
-                   "XOLDCODEYVE_0," +
-                   "XNOTE1_0," +
-                   "DIE_0, DIE_1, DIE_2, DIE_3, DIE_4, DIE_5, DIE_6, DIE_7, DIE_8, DIE_9, DIE_10, DIE_11, DIE_12, DIE_13, DIE_14, DIE_15, DIE_16, DIE_17, DIE_18, DIE_19,CCE_0,CCE_1, CCE_2, CCE_3, CCE_4, CCE_5, CCE_6, CCE_7,CCE_8,CCE_9, CCE_10, CCE_11, CCE_12, CCE_13, CCE_14, CCE_15, CCE_16, CCE_17, CCE_18, CCE_19, XBUSTYP3_0, XBPTNUM_0,XECODEYVE_0,XEDRIVERID_0,XEREGSTR_0,XETRAILER_0,XETREGSTR_0,XLOG_0,XPDLOG_0,XSTOVAL_0,XMOB_0, XWEB_0,XFORSEQ_0, XLOADUSR_0, XLOADNAM_0, XLOADEML_0, XDRN_0,XPODSUB_0, XPODSTATUS_0, XLODAPPSTA_0 ,XROUTSTAT_0, XTRIP_0, MDL_0,XMLDUSER_0,XPOHNUM_0,XSTATUS_0, DRN_0)\n" +
-                   "VALUES(1, '" + LVS + "',0, '" + vehroute.getFcy() + "','" + vehroute.getXdesfcy() + "', '','' , '', '', '', '', '','','','',0,0,0,'','" + date + "','','',0," +
-                   " '','','',0,0,'" + DATENOW + "','"+tripVO.getLoginUser()+"','" + DATENOW + "','','" + DATENOW + "','" + DATENOW + "',0x41027895E7BDB649ADD9317F23ADF47A,0,'','','','','" + date + "','" + vehroute.getHeudep() + "','" + vehroute.getDatarr() + "','" + vehroute.getHeuarr() + "','" + vehroute.getCodeyve() + "','','" + vehroute.getDriverid() + "','','',''," +
-                   " '"+Appuser+"','" + LVS + "',0,1,2,1,'" + vr + "','','',"+onlyReceipts+",''," + vehroute.getXroutnbr() + ",'',0.00,'" + vehroute.getCodeyve() + "',"+XLOADFLG+",1,'" + date + "',2,0.0,0.00,0.00,'',0,0,0,'','','','','','','','','','','','','','','','" + vehroute.getTrailer() + "','" + vehroute.getTrailer_1() + "','', " +
-                   " '" + date + "','',0,0,'','','" + vehroute.getNote() + "','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','',1,'"+XBPTNUM+"','','','','','','','',"+XSTOVAL+",'','',"+forceseq+",'','','', '',1,1,1,1,1,'','','','','"+tripVO.getAllocatedRouteCodes()+"')";
-           entityManager.createNativeQuery(query).executeUpdate();
-
-
-           int seqNUm = 2;
-           if (null != tripVO.getEquipmentObject()) {
-
-               String ttObj = mapper.writeValueAsString(tripVO.getEquipmentObject());
-               List<Map<String, Object>> totObj = mapper.readValue(ttObj, new TypeReference<List<Map<String, Object>>>() {
-               });
-               for (Map<String, Object> map : totObj) {
-                   if (map.size() <= 0) {
-                       continue;
-                   }
-                   this.insertEquipment(LVS, DATENOW, seqNUm, map);
-                   seqNUm++;
-               }
-           }
+            String date = format.format(date1);
+            String query = "INSERT INTO " + dbSchema + ".XX10CLODSTOH\n" +
+                    "(UPDTICK_0, " +
+                    "VCRNUM_0, " +
+                    "BETFCYCOD_0, " +
+                    "STOFCY_0," +
+                    "XDESFCY_0,"+
+                    "PURFCY_0, " +
+                    "SALFCY_0, " +
+                    "FCYADD_0, " +
+                    "BPSNUM_0, " +
+                    "BPSADD_0, " +
+                    "SCOLOC_0, " +
+                    "PJT_0, " +
+                    "BPCNUM_0, " +
+                    "CUR_0, " +
+                    "BETCPY_0, " +
+                    "INVSGH_0, " +
+                    "INVFLG_0, " +
+                    "SIHNUM_0, " +
+                    "FCYDES_0, " +
+                    "IPTDAT_0, " +
+                    "VCRDES_0, " +
+                    "TRSFAM_0, " +
+                    "TRSTYP_0, " +
+                    "TRSCOD_0, " +
+                    "ENTCOD_0, " +
+                    "WRHE_0, " +
+                    "EXPNUM_0, " +
+                    "IMPNUMLIG_0, " +
+                    "CREDAT_0, " +
+                    "CREUSR_0, " +
+                    "UPDDAT_0, " +
+                    "UPDUSR_0, " +
+                    "CREDATTIM_0, " +
+                    "UPDDATTIM_0, " +
+                    "AUUID_0, " +
+                    "CFMFLG_0, " +
+                    "SGHTYP_0, " +
+                    "TMPSGHNUM_0, " +
+                    "MANDOC_0, " +
+                    "ATDTCOD_0, " +
+                    "DPEDAT_0, " +
+                    "ETD_0, " +
+                    "ARVDAT_0, " +
+                    "ETA_0, " +
+                    "LICPLATE_0, " +
+                    "TRLLICPLATE_0, " +
+                    "DRIVERID_0, " +
+                    "XSALEMEN_0, " +
+                    "XOPERATOR_0, " +
+                    "XTECHN_0, " +
+                    "XAPPUSR_0, " +
+                    "XVCRNUM_0, " +
+                    "XRETURNFLG_0, " +
+                    "XACTFLG_0, " +
+                    "XBUSTYP1_0, " +
+                    "XBUSTYP2_0, " +
+                    "XVRSEL_0, " +
+                    "XLOADREF_0, " +
+                    "CODEYVE_0, " +
+                    "XVALFLG_0, " +
+                    "LOCSEL_0, " +
+                    "XROUTNBR_0, " +
+                    "XTEXTNUM_0, " +
+                    "XTOTNONSTK_0, " +
+                    "XCODEYVE_0, " +
+                    "XLOADFLG_0, " +
+                    "X10CHKIN_0, " +
+                    "XXIPTDAT_0, " +
+                    "XSCHREALC_0, " +
+                    "XCAPACITIES_0, " +
+                    "XVEHVOL_0, " +
+                    "XTOTSHESTK_0, " +
+                    "XSEALNUMH_0, " +
+                    "XUNLOADFLG_0, " +
+                    "XSTARTODMTR_0, " +
+                    "XENDODMTR_0, " +
+                    "XCHKINDAT_0, " +
+                    "XCHKINTIM_0, " +
+                    "XCHKOUDAT_0, " +
+                    "XCHKOUTIM_0, " +
+                    "XPMASS_0, " +
+                    "XPVOL_0," +
+                    "XMASS_0," +
+                    "XVMASS_0, " +
+                    "XLMASS_0, " +
+                    "XVOLCAM_0," +
+                    "XVEHV_0," +
+                    "XMPVOL_0," +
+                    "XUNLOADDATE_0," +
+                    "XUNLOADEDBY_0," +
+                    "XUNLOADTIME_0," +
+                    "TRAILER_0," +
+                    "TRAILER_1," +
+                    "TRAILER2_0," +
+                    "XVRDATE_0," +
+                    "XSOURCELOC_0," +
+                    "XLOADBAYD_0," +
+                    "XLOADBAYR_0," +
+                    "XDEVICEID_0," +
+                    "XOLDCODEYVE_0," +
+                    "XNOTE1_0," +
+                    "DIE_0, DIE_1, DIE_2, DIE_3, DIE_4, DIE_5, DIE_6, DIE_7, DIE_8, DIE_9, DIE_10, DIE_11, DIE_12, DIE_13, DIE_14, DIE_15, DIE_16, DIE_17, DIE_18, DIE_19,CCE_0,CCE_1, CCE_2, CCE_3, CCE_4, CCE_5, CCE_6, CCE_7,CCE_8,CCE_9, CCE_10, CCE_11, CCE_12, CCE_13, CCE_14, CCE_15, CCE_16, CCE_17, CCE_18, CCE_19, XBUSTYP3_0, XBPTNUM_0,XECODEYVE_0,XEDRIVERID_0,XEREGSTR_0,XETRAILER_0,XETREGSTR_0,XLOG_0,XPDLOG_0,XSTOVAL_0,XMOB_0, XWEB_0,XFORSEQ_0, XLOADUSR_0, XLOADNAM_0, XLOADEML_0, XDRN_0,XPODSUB_0, XPODSTATUS_0, XLODAPPSTA_0 ,XROUTSTAT_0, XTRIP_0, MDL_0,XMLDUSER_0,XPOHNUM_0,XSTATUS_0, DRN_0)\n" +
+                    "VALUES(1, '" + LVS + "',0, '" + vehroute.getFcy() + "','" + vehroute.getXdesfcy() + "', '','' , '', '', '', '', '','','','',0,0,0,'','" + date + "','','',0," +
+                    " '','','',0,0,'" + DATENOW + "','"+tripVO.getLoginUser()+"','" + DATENOW + "','','" + DATENOW + "','" + DATENOW + "',0x41027895E7BDB649ADD9317F23ADF47A,0,'','','','','" + date + "','" + vehroute.getHeudep() + "','" + vehroute.getDatarr() + "','" + vehroute.getHeuarr() + "','" + vehroute.getCodeyve() + "','','" + vehroute.getDriverid() + "','','',''," +
+                    " '"+Appuser+"','" + LVS + "',0,1,2,1,'" + vr + "','','',"+onlyReceipts+",''," + vehroute.getXroutnbr() + ",'',0.00,'" + vehroute.getCodeyve() + "',"+XLOADFLG+",1,'" + date + "',2,0.0,0.00,0.00,'',0,0,0,'','','','','','','','','','','','','','','','" + vehroute.getTrailer() + "','" + vehroute.getTrailer_1() + "','', " +
+                    " '" + date + "','',0,0,'','','" + vehroute.getNote() + "','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','',1,'"+XBPTNUM+"','','','','','','','',"+XSTOVAL+",'','',"+forceseq+",'','','', '',1,1,1,1,1,'','','','','"+tripVO.getAllocatedRouteCodes()+"')";
+            entityManager.createNativeQuery(query).executeUpdate();
 
 
-           //to update the LVS number in the SO for Picktickets
-           int sequenceNUm = 2;
-           if (null != tripVO.getTotalObject()) {
-               String totalObj = mapper.writeValueAsString(tripVO.getTotalObject());
-               Map<String, Object> tripObj = mapper.readValue(totalObj, new TypeReference<Map<String, Object>>() {
-               });
-               String ttObj = mapper.writeValueAsString(tripObj.get("selectedTripData"));
-               List<Map<String, Object>> totObj = mapper.readValue(ttObj, new TypeReference<List<Map<String, Object>>>() {
-               });
-               for (Map<String, Object> map : totObj) {
-                   if (map.size() <= 0) {
-                       continue;
-                   }
-                   String docType = null != map.get("doctype") ? map.get("doctype").toString() : "";
-                   int docNum = this.getDocType(docType);
-                   String number = map.get("docnum").toString();
+            int seqNUm = 2;
+            if (null != tripVO.getEquipmentObject()) {
 
-                   log.info("DOCument number");
-                   log.info(map.get("docnum").toString());
-                   if(docNum == 4)
-                   {
-                       //check SO list based on the Pickticket number
-                       this.CheckSOlistfromPickTicket(map.get("docnum").toString(), LVS);
-                   }
-
-                   sequenceNUm++;
-               }
-           }
+                String ttObj = mapper.writeValueAsString(tripVO.getEquipmentObject());
+                List<Map<String, Object>> totObj = mapper.readValue(ttObj, new TypeReference<List<Map<String, Object>>>() {
+                });
+                for (Map<String, Object> map : totObj) {
+                    if (map.size() <= 0) {
+                        continue;
+                    }
+                    this.insertEquipment(LVS, DATENOW, seqNUm, map);
+                    seqNUm++;
+                }
+            }
 
 
+            //to update the LVS number in the SO for Picktickets
+            int sequenceNUm = 2;
+            if (null != tripVO.getTotalObject()) {
+                String totalObj = mapper.writeValueAsString(tripVO.getTotalObject());
+                Map<String, Object> tripObj = mapper.readValue(totalObj, new TypeReference<Map<String, Object>>() {
+                });
+                String ttObj = mapper.writeValueAsString(tripObj.get("selectedTripData"));
+                List<Map<String, Object>> totObj = mapper.readValue(ttObj, new TypeReference<List<Map<String, Object>>>() {
+                });
+                for (Map<String, Object> map : totObj) {
+                    if (map.size() <= 0) {
+                        continue;
+                    }
+                    String docType = null != map.get("doctype") ? map.get("doctype").toString() : "";
+                    int docNum = this.getDocType(docType);
+                    String number = map.get("docnum").toString();
+
+                    log.info("DOCument number");
+                    log.info(map.get("docnum").toString());
+                    if(docNum == 4)
+                    {
+                        //check SO list based on the Pickticket number
+                        this.CheckSOlistfromPickTicket(map.get("docnum").toString(), LVS);
+                    }
+
+                    sequenceNUm++;
+                }
+            }
 
 
-       } catch (Exception e) {
-        e.printStackTrace();
-    }
+
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private String generatePTHeaderLinkDlvy ()
@@ -1349,36 +1373,36 @@ public class TransportService {
         }
         return latest_TEXCLOB;
     }
-  private  String  generateLVScode(String site, int m,int y){
+    private  String  generateLVScode(String site, int m,int y){
 
-      // List<LoadVehStock> loadvehstk = loadVehStockRepository.findBySiteandDate(site, m,y);
-       //int count=loadvehstk.size();
-      int count  = 0;
-      List<LoadVehStock> loadvehstk =  loadVehStockRepository.findBySiteandDateOrderByVcrnumDesc(site, m,y);
-      if(loadvehstk.size() > 0){
-          String itemCode = loadvehstk.get(0).getVcrnum();
-          log.info(itemCode);
-          String tripCodeNumber = itemCode.substring(itemCode.length() - 7, itemCode.length());
-          String strPattern = "^0+(?!$)";
-          String str1 = tripCodeNumber.replaceAll(strPattern, "");
-          log.info(str1);
-          count = Integer.parseInt(str1);
-      }
+        // List<LoadVehStock> loadvehstk = loadVehStockRepository.findBySiteandDate(site, m,y);
+        //int count=loadvehstk.size();
+        int count  = 0;
+        List<LoadVehStock> loadvehstk =  loadVehStockRepository.findBySiteandDateOrderByVcrnumDesc(site, m,y);
+        if(loadvehstk.size() > 0){
+            String itemCode = loadvehstk.get(0).getVcrnum();
+            log.info(itemCode);
+            String tripCodeNumber = itemCode.substring(itemCode.length() - 7, itemCode.length());
+            String strPattern = "^0+(?!$)";
+            String str1 = tripCodeNumber.replaceAll(strPattern, "");
+            log.info(str1);
+            count = Integer.parseInt(str1);
+        }
 
-       String sMonth = "";
-      if (m < 10) {
-          sMonth = "0"+String.valueOf(m);
-      } else {
-          sMonth = String.valueOf(m);
-      }
+        String sMonth = "";
+        if (m < 10) {
+            sMonth = "0"+String.valueOf(m);
+        } else {
+            sMonth = String.valueOf(m);
+        }
 
 
-      int x = y % 100;
-      String str = String.format("%07d", count+1);
-      log.info(str);
-      String latest_LVS = MessageFormat.format(LVS_NUMBER, site,x,sMonth,"XCHG",str);
-       return latest_LVS;
-  }
+        int x = y % 100;
+        String str = String.format("%07d", count+1);
+        log.info(str);
+        String latest_LVS = MessageFormat.format(LVS_NUMBER, site,x,sMonth,"XCHG",str);
+        return latest_LVS;
+    }
 
 
     public Map<String,String> ValidateListofTrips(List<TripVO> tripVOList)throws Exception {
@@ -2229,7 +2253,8 @@ public class TransportService {
         entityManager.createNativeQuery(sql).executeUpdate();
     }
 
-    public Map<String, String> saveTrip(List<TripVO> tripVOList) throws Exception {
+    public Map<String, Object> saveTrip(List<TripVO> tripVOList) throws Exception {
+        List<Map<String, Object>> results = new ArrayList<>();
         try {
 
             log.info("inside saveTrip",tripVOList);
@@ -2237,21 +2262,23 @@ public class TransportService {
 
                 String docDate = format.format(tripVO.getDate());
                 tripVO.setDate(format.parse(docDate));
+
+                Map<String, Object> result;
+
                 if (org.apache.commons.lang3.StringUtils.isBlank(tripVO.getItemCode())) {
-                    this.insertTrip(tripVO);
+                    result = this.insertTrip(tripVO);
                 } else {
 
                     log.info("inside ELSE- savetrip",tripVO);
 
-                    this.updateTrip(tripVO);
+                    result = this.updateTrip(tripVO);
                 }
+                results.add(result);
             }
-            Map<String, String> map = new HashMap<>();
-            map.put("success", "success");
-            return map;
+            Map<String, Object> response = new HashMap<>();
+            response.put("results", results);
+            return response;
         } catch (Exception e) {
-            //   entityManager.createNativeQuery("INSERT INTO DEMOTMS.XTMSTEMP VALUES(100);").executeUpdate();
-
             e.printStackTrace();
             throw e;
         }
@@ -2271,7 +2298,137 @@ public class TransportService {
        entityManager.createNativeQuery(queryStr).executeUpdate();
     }
 
-    private void updateTrip(TripVO tripVO) throws Exception {
+        private Map<String, Object> updateTrip(TripVO tripVO) throws Exception {
+            log.info("inside updateTrip");
+            Trip actualTrip = tripRepository.findByTripCode(tripVO.getItemCode());
+
+            if (tripVO.isLockP() == true && tripVO.isLock() == false) {
+                log.info("it is for deletion of VR at x3 updateTrip");
+                this.deleteTrip(actualTrip.getTripCode());
+                this.deleteSOrderData(actualTrip.getTripCode());
+            }
+
+            // latest trip list
+            List<String> LatestDocList = new ArrayList<>();
+            String LtotalObj = mapper.writeValueAsString(tripVO.getTotalObject());
+            Map<String, Object> LtripObj = mapper.readValue(LtotalObj, new TypeReference<Map<String, Object>>() {});
+            String LttObj = mapper.writeValueAsString(LtripObj.get("selectedTripData"));
+            List<Map<String, Object>> LtotObj = mapper.readValue(LttObj, new TypeReference<List<Map<String, Object>>>() {});
+            for (Map<String, Object> Lmap : LtotObj) {
+                String docnum = Lmap.get("docnum").toString();
+                LatestDocList.add(docnum);
+            }
+
+            // delete the prev document if removed
+            JSONObject totObj = new JSONObject(actualTrip.getTotalObject());
+            JSONArray resultArray = totObj.getJSONArray("selectedTripData");
+            List<String> AcutalDocList = new ArrayList<>();
+            for (int i = 0; i < resultArray.length(); i++) {
+                JSONObject rec = resultArray.getJSONObject(i);
+                String docid = rec.getString("docnum");
+                String doctype = rec.getString("doctype");
+                if (!LatestDocList.contains(docid)) {
+                    updateDocumentAfterDeleteDocument(docid, doctype);
+                }
+                AcutalDocList.add(docid);
+            }
+
+            Map<String, Object> response = new HashMap<>();
+
+            if (Objects.nonNull(actualTrip)) {
+                log.info("it is inside notnull updateTrip");
+                List<Map<String, Object>> pickUP = (List<Map<String, Object>>) tripVO.getPickupObject();
+                List<Map<String, Object>> dropObject = (List<Map<String, Object>>) tripVO.getDropObject();
+
+                if (pickUP.size() > 0 || dropObject.size() > 0) {
+
+                    // ---- CLAIM CHECK for update path ----
+                    String thisTripCode = tripVO.getItemCode();
+                    String totalObjStr = mapper.writeValueAsString(tripVO.getTotalObject());
+                    Map<String, Object> tripObj = mapper.readValue(totalObjStr, new TypeReference<Map<String, Object>>() {});
+                    String ttObj = mapper.writeValueAsString(tripObj.get("selectedTripData"));
+                    List<Map<String, Object>> allDocs = mapper.readValue(ttObj, new TypeReference<List<Map<String, Object>>>() {});
+
+                    List<Map<String, Object>> claimedDocs = new ArrayList<>();
+                    List<DocClaimResult> conflicts = new ArrayList<>();
+
+                    for (Map<String, Object> map : allDocs) {
+                        if (map.size() <= 0) continue;
+                        String docType = null != map.get("doctype") ? map.get("doctype").toString() : "";
+                        int docNum = this.getDocType(docType);
+                        String docnum = map.get("docnum").toString();
+
+                        DocClaimResult claim = this.tryClaimDocument(docnum, docNum, thisTripCode);
+                        if (claim.claimed) {
+                            claimedDocs.add(map);
+                        } else {
+                            conflicts.add(claim);
+                        }
+                    }
+
+                    if (claimedDocs.isEmpty()) {
+                        response.put("status", "FAILED_ALL_CONFLICT");
+                        response.put("message", "All documents in this trip are already scheduled on other trips.");
+                        response.put("conflicts", buildConflictPayload(conflicts));
+                        return response;
+                    }
+
+                    if (!conflicts.isEmpty()) {
+                        Map<String, Object> filteredTotalObj = new HashMap<>(tripObj);
+                        filteredTotalObj.put("selectedTripData", claimedDocs);
+                        tripVO.setTotalObject(filteredTotalObj);
+                        filterPickupAndDropObjects(tripVO, claimedDocs);
+                        recalculateTripAggregates(tripVO, claimedDocs);
+                    }
+                    // ---- END CLAIM CHECK ----
+
+                    this.setTrip(actualTrip, tripVO);
+                    tripRepository.save(actualTrip);
+                    log.info("it is inside size updateTrip");
+                    this.updateDocumentDetailWhenTripUpdated(tripVO);
+
+                    TempRoute temproute = tempRouteRepository.findByXnumpc(tripVO.getItemCode());
+                    if (Objects.nonNull(temproute)) {
+                        log.info("it is updateTrip IF");
+                        this.DeleteandreloadTempTrip(tripVO);
+                    } else {
+                        log.info("it is updateTrip ELSE");
+                        this.LoadTempTrip(tripVO, tripVO.getItemCode());
+                    }
+
+                    if (conflicts.isEmpty()) {
+                        response.put("status", "SUCCESS");
+                    } else {
+                        response.put("status", "PARTIAL_SUCCESS");
+                        response.put("message", conflicts.size() + " document(s) were already scheduled on other trips and were excluded.");
+                        response.put("conflicts", buildConflictPayload(conflicts));
+                    }
+                    response.put("tripCode", actualTrip.getTripCode());
+
+                } else {
+                    this.updateALlTrips(tripVO.getCode(), tripVO.getTrips(), tripVO.getSite(), tripVO.getDate());
+                    int lock = actualTrip.getLock();
+                    log.info("lock status inside else ", lock);
+                    tripRepository.delete(actualTrip);
+                    log.info("after deletion");
+                    this.unOptimiseRoutes(tripVO);
+                    if (lock == 1) {
+                        this.deleteTrip(actualTrip.getTripCode());
+                    }
+                    response.put("status", "SUCCESS");
+                }
+            } else {
+                return this.insertTrip(tripVO);
+            }
+
+            if (tripVO.isReorder() == true || tripVO.isRoute() == false) {
+                getNextTripofsameVeh(tripVO.getCode(), tripVO.getTrips(), tripVO.getDate());
+            }
+
+            return response;
+        }
+
+        private String updateTrip_backupold(TripVO tripVO) throws Exception {
         log.info("inside updateTrip");
         Trip actualTrip = tripRepository.findByTripCode(tripVO.getItemCode());
        // String vrcode = tripVO.getItemCode().toString();
@@ -2345,16 +2502,19 @@ public class TransportService {
                     }
                 }
             } else {
-                this.insertTrip(tripVO);
+                //this.insertTrip(tripVO);
             }
 
 
         if(tripVO.isReorder() == true || tripVO.isRoute() == false){
             getNextTripofsameVeh(tripVO.getCode(),tripVO.getTrips(),tripVO.getDate());
         }
+
+
+            return "";
     }
-	
-	
+
+
 	   public void UpdateRemovedDocumentfromTrip(String Docid) {
    }
     public void updateDocumentDetailWhenTripUpdated(TripVO tripVO) {
@@ -2362,73 +2522,73 @@ public class TransportService {
       log.info("Update document details when the trip is updated");
        // trip.getGeneratedBy().equalsIgnoreCase("Scheduler")
             String routename = tripVO.getAllocatedRouteCodes();
-          int sequenceNUm = 2;
-          if (null != tripVO.getTotalObject()) {
-              String totalObj = mapper.writeValueAsString(tripVO.getTotalObject());
-              Map<String, Object> tripObj = mapper.readValue(totalObj, new TypeReference<Map<String, Object>>() {
-              });
-              String ttObj = mapper.writeValueAsString(tripObj.get("selectedTripData"));
-              List<Map<String, Object>> totObj = mapper.readValue(ttObj, new TypeReference<List<Map<String, Object>>>() {
-              });
-              for (Map<String, Object> map : totObj) {
-                  if (map.size() <= 0) {
-                      continue;
-                  }
-                  int tripno = tripVO.getTrips();
-                  List<Map<String, Object>> list = (List<Map<String, Object>>) tripVO.getTrialerObject();
-                  String trailer = "",trailer1 = "" ;
-                  if (!CollectionUtils.isEmpty(list)) {
-                      log.info("after locking", list);
-                      Map<String, Object> map2 = list.get(0);
-                      log.info("after locking", map2);
-                      if (Objects.nonNull(map2.get("trailer"))) {
-                          trailer = (String) map2.get("trailer");
-                      }
-                      if(list.size() > 1) {
-                          Map<String, Object> map1 = list.get(1);
-                          log.info("after locking", map1);
-                          if (Objects.nonNull(map1.get("trailer"))) {
-                              trailer1 = (String) map1.get("trailer");
-                          }
-                      }
-                  }
-                  Map<String, Object> Vehlist = (Map<String, Object>) tripVO.getVehicleObject();
-                  String BPTNUM = "";
-                  BPTNUM = (String) Vehlist.get("bptnum");
-                  String Veh_code = (String) Vehlist.get("codeyve");
-                  String veh_licplate = (String) Vehlist.get("name");
-                  String driverid = (String) tripVO.getDriverId();
-                  String docType = null != map.get("doctype") ? map.get("doctype").toString() : "";
-                  int docNum = this.getDocType(docType);
-                  // String comments = null != map.get("") ? map.get().toString("") : "";
-                  String docDate = format.format(tripVO.getDate());
-				    String StartDate = null != map.get("startDate") ? format.format(format.parse(map.get("startDate").toString())) : "";
-                  String docendDate = null != map.get("endDate") ? format.format(format.parse(map.get("endDate").toString())) : "";
-                String vr = tripVO.getItemCode();
-                  String comments = null !=map.get("noteMessage") ? map.get("noteMessage").toString() : "";
-                  String dDate = (String) map.get("docdate");
-                  Date ddDate = format.parse(dDate);
-                  Date selectedDate = format.parse(docDate);
-                  if(tripVO.getOptistatus().equalsIgnoreCase("Optimized")) {
-                      log.info("Trip is optimised");
-                      String rtnDate = format.format(tripVO.getEndDate());
-                      Date enddate = format.parse(rtnDate);
-                      String Arrtime = null != map.get("arrival") ? map.get("arrival").toString() : "";
-                      String customer = null != map.get("bpcode") ?  map.get("bpcode").toString() : "";
-                      String Deptime = null != map.get("end") ? map.get("end").toString() : "";
-                      String SevTime = null != map.get("serTime") ? map.get("serTime").toString() : "";
-                      String Traveltime = null != map.get("time") ? map.get("time").toString() : "";
-                      String TravelDist = null != map.get("distance") ? map.get("distance").toString() : "";
-                      String headertext = null != map.get("noteMessage") ? map.get("noteMessage").toString() : "";
-                      String carriertext = null != map.get("CarrierMessage") ? map.get("CarrierMessage").toString() : "";
-                      String loadertext = null != map.get("loaderMessage") ? map.get("loaderMessage").toString() : "";
-                      this.updateDocs(vr, Veh_code, docDate, Arrtime, BPTNUM, Deptime, docNum, map.get("docnum").toString(), driverid, tripno, trailer, comments, headertext, carriertext, loadertext, customer, sequenceNUm,StartDate,docendDate, veh_licplate, "");
-                  }
-                  else {
-                       log.info("Trip is updating");
-                      this.updateDocsAtTripCreation(vr, Veh_code, docDate, docNum, map.get("docnum").toString(),tripno, sequenceNUm, veh_licplate, routename);
-                  }
-                  sequenceNUm++;
+            int sequenceNUm = 2;
+            if (null != tripVO.getTotalObject()) {
+                String totalObj = mapper.writeValueAsString(tripVO.getTotalObject());
+                Map<String, Object> tripObj = mapper.readValue(totalObj, new TypeReference<Map<String, Object>>() {
+                });
+                String ttObj = mapper.writeValueAsString(tripObj.get("selectedTripData"));
+                List<Map<String, Object>> totObj = mapper.readValue(ttObj, new TypeReference<List<Map<String, Object>>>() {
+                });
+                for (Map<String, Object> map : totObj) {
+                    if (map.size() <= 0) {
+                        continue;
+                    }
+                    int tripno = tripVO.getTrips();
+                    List<Map<String, Object>> list = (List<Map<String, Object>>) tripVO.getTrialerObject();
+                    String trailer = "",trailer1 = "" ;
+                    if (!CollectionUtils.isEmpty(list)) {
+                        log.info("after locking", list);
+                        Map<String, Object> map2 = list.get(0);
+                        log.info("after locking", map2);
+                        if (Objects.nonNull(map2.get("trailer"))) {
+                            trailer = (String) map2.get("trailer");
+                        }
+                        if(list.size() > 1) {
+                            Map<String, Object> map1 = list.get(1);
+                            log.info("after locking", map1);
+                            if (Objects.nonNull(map1.get("trailer"))) {
+                                trailer1 = (String) map1.get("trailer");
+                            }
+                        }
+                    }
+                    Map<String, Object> Vehlist = (Map<String, Object>) tripVO.getVehicleObject();
+                    String BPTNUM = "";
+                    BPTNUM = (String) Vehlist.get("bptnum");
+                    String Veh_code = (String) Vehlist.get("codeyve");
+                    String veh_licplate = (String) Vehlist.get("name");
+                    String driverid = (String) tripVO.getDriverId();
+                    String docType = null != map.get("doctype") ? map.get("doctype").toString() : "";
+                    int docNum = this.getDocType(docType);
+                    // String comments = null != map.get("") ? map.get().toString("") : "";
+                    String docDate = format.format(tripVO.getDate());
+                    String StartDate = null != map.get("startDate") ? format.format(format.parse(map.get("startDate").toString())) : "";
+                    String docendDate = null != map.get("endDate") ? format.format(format.parse(map.get("endDate").toString())) : "";
+                    String vr = tripVO.getItemCode();
+                    String comments = null !=map.get("noteMessage") ? map.get("noteMessage").toString() : "";
+                    String dDate = (String) map.get("docdate");
+                    Date ddDate = format.parse(dDate);
+                    Date selectedDate = format.parse(docDate);
+                    if(tripVO.getOptistatus().equalsIgnoreCase("Optimized")) {
+                        log.info("Trip is optimised");
+                        String rtnDate = format.format(tripVO.getEndDate());
+                        Date enddate = format.parse(rtnDate);
+                        String Arrtime = null != map.get("arrival") ? map.get("arrival").toString() : "";
+                        String customer = null != map.get("bpcode") ?  map.get("bpcode").toString() : "";
+                        String Deptime = null != map.get("end") ? map.get("end").toString() : "";
+                        String SevTime = null != map.get("serTime") ? map.get("serTime").toString() : "";
+                        String Traveltime = null != map.get("time") ? map.get("time").toString() : "";
+                        String TravelDist = null != map.get("distance") ? map.get("distance").toString() : "";
+                        String headertext = null != map.get("noteMessage") ? map.get("noteMessage").toString() : "";
+                        String carriertext = null != map.get("CarrierMessage") ? map.get("CarrierMessage").toString() : "";
+                        String loadertext = null != map.get("loaderMessage") ? map.get("loaderMessage").toString() : "";
+                        this.updateDocs(vr, Veh_code, docDate, Arrtime, BPTNUM, Deptime, docNum, map.get("docnum").toString(), driverid, tripno, trailer, comments, headertext, carriertext, loadertext, customer, sequenceNUm,StartDate,docendDate, veh_licplate, "");
+                    }
+                    else {
+                        log.info("Trip is updating");
+                        this.updateDocsAtTripCreation(vr, Veh_code, docDate, docNum, map.get("docnum").toString(),tripno, sequenceNUm, veh_licplate, routename);
+                    }
+                    sequenceNUm++;
                   /*
                   String docType = null != map.get("doctype") ? map.get("doctype").toString() : "";
                   int docNum = this.getDocType(docType);
@@ -2446,9 +2606,348 @@ public class TransportService {
             e.printStackTrace();
         }
     }
-	
 
-    public void insertTrip(TripVO tripVO) throws Exception {
+
+        /**
+         * Atomically checks and claims a document for the given trip code.
+         * Uses SELECT ... FOR UPDATE to lock the row within the current transaction,
+         * so a concurrent call for the same docnum will block until this transaction
+         * commits or rolls back — closing the race window completely.
+         */
+        private DocClaimResult tryClaimDocument(String docnum, int docNum, String newTripCode) {
+            DocClaimResult result = new DocClaimResult();
+            result.docnum = docnum;
+            result.docType = String.valueOf(docNum);
+
+            DocTableMeta meta = getDocTableMeta(docNum);
+            if (meta == null) {
+                log.warn("Unknown docType {} for docnum {} - skipping claim check", docNum, docnum);
+                result.claimed = true;
+                return result;
+            }
+
+            // Attempt the claim directly via UPDATE.
+            // SQL Server takes an exclusive lock on any row this UPDATE touches,
+            // held until this transaction commits or rolls back. A concurrent
+            // claim attempt for the same docnum will simply block until this
+            // transaction finishes, then see the now-updated value and correctly
+            // fail its own WHERE clause. No table hints needed - this is standard
+            // UPDATE locking behavior.
+            String claimSql = MessageFormat.format(CLAIM_DOC_QUERY,
+                    dbSchema, meta.table, meta.tripLinkColumn, meta.docIdColumn, newTripCode, docnum);
+
+            int rowsUpdated = entityManager.createNativeQuery(claimSql).executeUpdate();
+
+            if (rowsUpdated > 0) {
+                result.claimed = true;
+                return result;
+            }
+
+            // Claim failed - look up who owns it, purely for the conflict message.
+            result.claimed = false;
+            try {
+                String ownerSql = MessageFormat.format(SELECT_DOC_OWNER_QUERY,
+                        dbSchema, meta.table, meta.tripLinkColumn, meta.docIdColumn, docnum);
+                List<?> rows = entityManager.createNativeQuery(ownerSql).getResultList();
+                if (!rows.isEmpty() && rows.get(0) != null) {
+                    result.existingTripCode = rows.get(0).toString().trim();
+                } else {
+                    result.existingTripCode = "UNKNOWN";
+                }
+            } catch (Exception e) {
+                log.error("Error reading owner for document {}", docnum, e);
+                result.existingTripCode = "UNKNOWN";
+            }
+
+            return result;
+        }
+
+
+        private List<Map<String, Object>> buildConflictPayload(List<DocClaimResult> conflicts) {
+            List<Map<String, Object>> out = new ArrayList<>();
+            for (DocClaimResult c : conflicts) {
+                Map<String, Object> m = new HashMap<>();
+                m.put("docnum", c.docnum);
+                m.put("docType", c.docType);
+                m.put("existingTripCode", c.existingTripCode);
+                out.add(m);
+            }
+            return out;
+        }
+
+        /**
+         * Filters tripVO's pickupObject/dropObject lists down to only the documents
+         * that were successfully claimed. These are separate arrays from
+         * totalObject.selectedTripData and must be filtered independently -
+         * setTrip() serializes them directly into the PICKUPOBJECT/DROPOBJECT
+         * columns, and LoadTempTrip() also reads from them.
+         */
+        private void filterPickupAndDropObjects(TripVO tripVO, List<Map<String, Object>> claimedDocs) {
+            Set<String> claimedDocnums = new HashSet<>();
+            for (Map<String, Object> doc : claimedDocs) {
+                if (doc.get("docnum") != null) {
+                    claimedDocnums.add(doc.get("docnum").toString());
+                }
+            }
+
+            List<Map<String, Object>> originalPickups = (List<Map<String, Object>>) tripVO.getPickupObject();
+            List<Map<String, Object>> filteredPickups = new ArrayList<>();
+            if (originalPickups != null) {
+                for (Map<String, Object> doc : originalPickups) {
+                    if (doc.get("docnum") != null && claimedDocnums.contains(doc.get("docnum").toString())) {
+                        filteredPickups.add(doc);
+                    }
+                }
+            }
+            tripVO.setPickupObject(filteredPickups);
+
+            List<Map<String, Object>> originalDrops = (List<Map<String, Object>>) tripVO.getDropObject();
+            List<Map<String, Object>> filteredDrops = new ArrayList<>();
+            if (originalDrops != null) {
+                for (Map<String, Object> doc : originalDrops) {
+                    if (doc.get("docnum") != null && claimedDocnums.contains(doc.get("docnum").toString())) {
+                        filteredDrops.add(doc);
+                    }
+                }
+            }
+            tripVO.setDropObject(filteredDrops);
+        }
+
+        /**
+         * Recomputes trip-level aggregates (stops/drops/pickups/weight/volume)
+         * after some documents were excluded due to conflicts.
+         * Adjust field names below to match your actual document map keys.
+         */
+        private void recalculateTripAggregates1111(TripVO tripVO, List<Map<String, Object>> claimedDocs) {
+            int drops = 0, pickups = 0;
+            double totalWeight = 0, totalVolume = 0;
+
+            for (Map<String, Object> doc : claimedDocs) {
+                String movtype = null != doc.get("movtype") ? doc.get("movtype").toString() : "";
+                if ("DROP".equalsIgnoreCase(movtype)) {
+                    drops++;
+                } else if ("PICKUP".equalsIgnoreCase(movtype)) {
+                    pickups++;
+                }
+
+                try {
+                    if (doc.get("netweight") != null) {
+                        totalWeight += Double.parseDouble(doc.get("netweight").toString());
+                    }
+                } catch (NumberFormatException ignored) {}
+
+                try {
+                    if (doc.get("volume") != null) {
+                        totalVolume += Double.parseDouble(doc.get("volume").toString());
+                    }
+                } catch (NumberFormatException ignored) {}
+            }
+
+            tripVO.setDrops(drops);
+            tripVO.setPickups(pickups);
+            tripVO.setStops(drops + pickups);
+            tripVO.setDoc_capacity(String.valueOf(totalWeight));   // <-- fixed
+            tripVO.setDoc_volume(String.valueOf(totalVolume));     // <-- fixed
+        }
+
+        /**
+         * Recomputes ALL trip-level aggregates (stops/drops/pickups/weight/volume/percentages)
+         * after some documents were excluded due to conflicts. Every field derived from
+         * the document set must be recalculated here - otherwise the trip header shows
+         * totals for documents that were never actually included.
+         */
+        private void recalculateTripAggregates(TripVO tripVO, List<Map<String, Object>> claimedDocs) {
+            int drops = 0, pickups = 0;
+            double totalWeight = 0, totalVolume = 0;
+
+            for (Map<String, Object> doc : claimedDocs) {
+                String movtype = null != doc.get("movtype") ? doc.get("movtype").toString() : "";
+                if ("DROP".equalsIgnoreCase(movtype)) {
+                    drops++;
+                } else if ("PICKUP".equalsIgnoreCase(movtype)) {
+                    pickups++;
+                }
+
+                try {
+                    if (doc.get("netweight") != null) {
+                        totalWeight += Double.parseDouble(doc.get("netweight").toString());
+                    }
+                } catch (NumberFormatException ignored) {}
+
+                try {
+                    if (doc.get("volume") != null) {
+                        totalVolume += Double.parseDouble(doc.get("volume").toString());
+                    }
+                } catch (NumberFormatException ignored) {}
+            }
+
+            int stops = drops + pickups;
+
+            // vehicle capacity ceilings - unchanged, these come from the vehicle, not the docs
+            double vehCapacity = safeParseDouble(tripVO.getTot_capacity());
+            double vehVolume = safeParseDouble(tripVO.getTot_volume());
+
+            double percentageMass = 0;
+            double percentageVolume = 0;
+            if (vehCapacity > 0) {
+                percentageMass = round2((totalWeight / vehCapacity) * 100);
+            }
+            if (vehVolume > 0) {
+                percentageVolume = round2((totalVolume / vehVolume) * 100);
+            }
+
+            String uomCapacity = tripVO.getUom_capacity() != null ? tripVO.getUom_capacity() : "";
+            String uomVolume = tripVO.getUom_volume() != null ? tripVO.getUom_volume() : "";
+
+            String totalWeightStr = formatNumber(totalWeight);
+            String totalVolumeStr = formatNumber(totalVolume);
+
+            tripVO.setDrops(drops);
+            tripVO.setPickups(pickups);
+            tripVO.setStops(stops);
+            tripVO.setStartIndex(stops);
+
+            tripVO.setDoc_capacity(String.valueOf(totalWeight));
+            tripVO.setDoc_volume(String.valueOf(totalVolume));
+            tripVO.setPer_capacity(percentageMass);
+            tripVO.setPer_volume(percentageVolume);
+            tripVO.setWeightPercentage(percentageMass);
+            tripVO.setVolumePercentage(percentageVolume);
+            tripVO.setTotalWeight(totalWeightStr + " " + uomCapacity);
+            tripVO.setTotalVolume(totalVolumeStr + " " + uomVolume);
+        }
+
+        private double safeParseDouble(Object val) {
+            if (val == null) return 0;
+            try {
+                return Double.parseDouble(val.toString().trim());
+            } catch (NumberFormatException e) {
+                return 0;
+            }
+        }
+
+        private double round2(double val) {
+            return Math.round(val * 100.0) / 100.0;
+        }
+
+        private String formatNumber(double val) {
+            return (val % 1 == 0) ? String.valueOf((long) val) : String.valueOf(round2(val));
+        }
+
+
+
+        public Map<String, Object> insertTrip(TripVO tripVO) throws Exception {
+            log.info("insert Trip is loaded...");
+
+            List<Map<String, Object>> pickUP = (List<Map<String, Object>>) tripVO.getPickupObject();
+            List<Map<String, Object>> dropObject = (List<Map<String, Object>>) tripVO.getDropObject();
+
+            if (StringUtils.isEmpty(tripVO.getCode()) || (pickUP.size() == 0 && dropObject.size() == 0)) {
+                throw new Exception("Trip doesn't have drops or pickups");
+            }
+
+            String docDate = format.format(tripVO.getDate());
+            String date = format.format(new Date());
+            String routename = tripVO.getAllocatedRouteCodes();
+            Map<String, Object> Vehlist = (Map<String, Object>) tripVO.getVehicleObject();
+            String veh_licplate = (String) Vehlist.get("name");
+            String endDate = StringUtils.isEmpty(tripVO.getEndDate()) ? "" : format.format(tripVO.getEndDate());
+
+            // ---- reserve the trip code up front so we can claim docs against it ----
+            Trip trip = new Trip();
+            this.setTrip(trip, tripVO);
+            this.generateVRCode(tripVO.getSite(), tripVO.getDate(), trip);
+            String newTripCode = trip.getTripCode();
+
+            // ---- extract selectedTripData ----
+            String totalObjStr = mapper.writeValueAsString(tripVO.getTotalObject());
+            Map<String, Object> tripObj = mapper.readValue(totalObjStr, new TypeReference<Map<String, Object>>() {});
+            String ttObj = mapper.writeValueAsString(tripObj.get("selectedTripData"));
+            List<Map<String, Object>> allDocs = mapper.readValue(ttObj, new TypeReference<List<Map<String, Object>>>() {});
+
+            // ---- claim each doc atomically (SELECT ... FOR UPDATE under this transaction) ----
+            List<Map<String, Object>> claimedDocs = new ArrayList<>();
+            List<DocClaimResult> conflicts = new ArrayList<>();
+
+            for (Map<String, Object> map : allDocs) {
+                if (map.size() <= 0) continue;
+                String docType = null != map.get("doctype") ? map.get("doctype").toString() : "";
+                int docNum = this.getDocType(docType);
+                String docnum = map.get("docnum").toString();
+
+                DocClaimResult claim = this.tryClaimDocument(docnum, docNum, newTripCode);
+                if (claim.claimed) {
+                    claimedDocs.add(map);
+                } else {
+                    conflicts.add(claim);
+                }
+            }
+
+            // ---- use case 2: nothing claimable -> abort, nothing written ----
+            if (claimedDocs.isEmpty()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("status", "FAILED_ALL_CONFLICT");
+                response.put("message", "All documents in this trip are already scheduled on other trips.");
+                response.put("conflicts", buildConflictPayload(conflicts));
+                return response;
+            }
+
+            // ---- use case 1: partial -> filter tripVO down to claimed docs only ----
+            if (!conflicts.isEmpty()) {
+                Map<String, Object> filteredTotalObj = new HashMap<>(tripObj);
+                filteredTotalObj.put("selectedTripData", claimedDocs);
+                tripVO.setTotalObject(filteredTotalObj);
+                filterPickupAndDropObjects(tripVO, claimedDocs);
+                recalculateTripAggregates(tripVO, claimedDocs);
+                // rebuild trip since setTrip() serialized the old totalObject
+                this.setTrip(trip, tripVO);
+                trip.setTripCode(newTripCode);
+            }
+
+            // ---- proceed with your existing XX10TRIPS insert (unchanged column list) ----
+            log.info("inside xx10trips");
+            String sql = "INSERT INTO " + dbSchema + ".XX10TRIPS\n" +
+                    "(CODE, DRIVERNAME, TRAILERS, EQUIPMENTS, TRIPS, PICKUPS, PICKUPOBJECT, DROPOBJECT, EQUIPMENTOBJECT, TRAILEROBJECT, DROPS, STOPS, SITE, DOCDATE, CREATEDATE, UPDATEDATE, USERCODE, " +
+                    "TRIPCODE, TOTALOBJECT, lock, driverId, notes,optistatus,uomTime,serviceTime,totalTime,travelTime,serviceCost,distanceCost,totalCost,fixedCost,uomDistance,totalDistance, weightPercentage, volumePercentage, totalWeight, totalVolume, startTime, endTime, capacity, startIndex, VEHICLEOBJECT, HEUEXEC,DATEXEC,regularCost, overtimeCost,DEPSITE,ARRSITE,ENDDATE,LOADERINFO,FORCESEQ,VRSEQ, GENERATEDBY, alertflg, warningnotes, PER_CAPACITY,PER_VOLUME,TOT_CAPACITY,TOT_VOLUME, DOC_CAPACITY,DOC_VOLUME, UOM_CAPACITY, UOM_VOLUME, ALLOCATEDROUTECODE)\n" +
+                    "VALUES('" + trip.getCode() + "', '" + trip.getDriverName() + "', " + trip.getTrailers() + ", " + trip.getEquipments() + ", " + trip.getTrips() + ", " + trip.getPickups() + ", '" + trip.getPickup() + "', '" + trip.getDrop() + "'," +
+                    " '" + trip.getEquipment() + "', '" + trip.getTrialer() + "', " + trip.getDrops() + ", " + trip.getStops() + ", '" + trip.getSite() + "', '" + docDate + "', '" + date + "', '', '"+trip.getXusrcode()+"', '" + trip.getTripCode() + "', '" + trip.getTotalObject() + "', 0, '" + trip.getDriverId() + "'," +
+                    " '" + trip.getNotes() + "', '" + trip.getOptistatus() + "','" + trip.getUomTime() + "','" + trip.getServiceTime() + "','" + trip.getTotalTime() + "','" + trip.getTravelTime() + "','" + trip.getServiceCost() + "','" + trip.getDistanceCost() + "','" + trip.getTotalCost() + "','" + trip.getFixedCost() + "','" + trip.getUomDistance() + "','" + trip.getTotalDistance() + "','" + trip.getWeightPercentage() + "', '" + trip.getVolumePercentage() + "', '" + trip.getTotalWeight() + "', '" + trip.getTotalVolume() + "', '" + trip.getStartTime() + "', '" + trip.getEndTime() + "', '" + trip.getCapacities() + "', '" + trip.getStartIndex() + "', '" + trip.getVehicle() + "','" + trip.getHeuexec() + "','" +date+ "','" + trip.getRegularCost() + "','" + trip.getOvertimeCost() + "','" + trip.getDepSite() + "','" + trip.getArrSite() +"', '" + endDate + "','" + trip.getLoaderInfo() +"', "+trip.getForceSeq()+","+trip.getVrseq()+",'" + trip.getGeneratedBy() +"',0 , '','" + trip.getPer_capacity() + "', '" + trip.getPer_volume() + "','" + trip.getTot_capacity() + "', '" + trip.getTot_volume() + "','" + trip.getDoc_capacity() + "', '" + trip.getDoc_volume() + "','" + trip.getUom_capacity() + "', '" + trip.getUom_volume() + "' ,'"+trip.getAllocatedRouteCodes()+"' )";
+            entityManager.createNativeQuery(sql).executeUpdate();
+
+            // ---- update only the claimed documents ----
+            int sequenceNUm = 2;
+            Integer tripno = trip.getTrips();
+            for (Map<String, Object> map : claimedDocs) {
+                String docType = null != map.get("doctype") ? map.get("doctype").toString() : "";
+                int docNum = this.getDocType(docType);
+                String vr = trip.getTripCode();
+                String Veh_code = trip.getCode();
+                this.updateDocsAtTripCreation(vr, Veh_code, docDate, docNum, map.get("docnum").toString(),
+                        tripno, sequenceNUm, veh_licplate, routename);
+                sequenceNUm++;
+            }
+
+            this.LoadTempTrip(tripVO, trip.getTripCode());
+
+            // ---- build response ----
+            Map<String, Object> response = new HashMap<>();
+            if (conflicts.isEmpty()) {
+                response.put("status", "SUCCESS");
+            } else {
+                response.put("status", "PARTIAL_SUCCESS");
+                response.put("message", conflicts.size() + " document(s) were already scheduled on other trips and were excluded.");
+                response.put("conflicts", buildConflictPayload(conflicts));
+            }
+            response.put("tripCode", trip.getTripCode());
+            List<String> includedDocnums = new ArrayList<>();
+            for (Map<String, Object> m : claimedDocs) includedDocnums.add(m.get("docnum").toString());
+            response.put("includedDocs", includedDocnums);
+
+            return response;
+        }
+
+
+        public void insertTrip_backupforTripGenerating(TripVO tripVO) throws Exception {
         log.info("insert Trip  is loaded...");
 
         List<Map<String, Object>> pickUP = (List<Map<String, Object>>) tripVO.getPickupObject();
@@ -2471,6 +2970,8 @@ public class TransportService {
             this.setTrip(trip, tripVO);
             this.generateVRCode(tripVO.getSite(), tripVO.getDate(), trip);
             log.info("inside xx10trips");
+
+
             String sql = "INSERT INTO " + dbSchema + ".XX10TRIPS\n" +
                     "(CODE, DRIVERNAME, TRAILERS, EQUIPMENTS, TRIPS, PICKUPS, PICKUPOBJECT, DROPOBJECT, EQUIPMENTOBJECT, TRAILEROBJECT, DROPS, STOPS, SITE, DOCDATE, CREATEDATE, UPDATEDATE, USERCODE, " +
                     "TRIPCODE, TOTALOBJECT, lock, driverId, notes,optistatus,uomTime,serviceTime,totalTime,travelTime,serviceCost,distanceCost,totalCost,fixedCost,uomDistance,totalDistance, weightPercentage, volumePercentage, totalWeight, totalVolume, startTime, endTime, capacity, startIndex, VEHICLEOBJECT, HEUEXEC,DATEXEC,regularCost, overtimeCost,DEPSITE,ARRSITE,ENDDATE,LOADERINFO,FORCESEQ,VRSEQ, GENERATEDBY, alertflg, warningnotes, PER_CAPACITY,PER_VOLUME,TOT_CAPACITY,TOT_VOLUME, DOC_CAPACITY,DOC_VOLUME, UOM_CAPACITY, UOM_VOLUME, ALLOCATEDROUTECODE)\n" +
@@ -2478,31 +2979,31 @@ public class TransportService {
                     " '" + trip.getEquipment() + "', '" + trip.getTrialer() + "', " + trip.getDrops() + ", " + trip.getStops() + ", '" + trip.getSite() + "', '" + docDate + "', '" + date + "', '', '"+trip.getXusrcode()+"', '" + trip.getTripCode() + "', '" + trip.getTotalObject() + "', 0, '" + trip.getDriverId() + "'," +
                     " '" + trip.getNotes() + "', '" + trip.getOptistatus() + "','" + trip.getUomTime() + "','" + trip.getServiceTime() + "','" + trip.getTotalTime() + "','" + trip.getTravelTime() + "','" + trip.getServiceCost() + "','" + trip.getDistanceCost() + "','" + trip.getTotalCost() + "','" + trip.getFixedCost() + "','" + trip.getUomDistance() + "','" + trip.getTotalDistance() + "','" + trip.getWeightPercentage() + "', '" + trip.getVolumePercentage() + "', '" + trip.getTotalWeight() + "', '" + trip.getTotalVolume() + "', '" + trip.getStartTime() + "', '" + trip.getEndTime() + "', '" + trip.getCapacities() + "', '" + trip.getStartIndex() + "', '" + trip.getVehicle() + "','" + trip.getHeuexec() + "','" +date+ "','" + trip.getRegularCost() + "','" + trip.getOvertimeCost() + "','" + trip.getDepSite() + "','" + trip.getArrSite() +"', '" + endDate + "','" + trip.getLoaderInfo() +"', "+trip.getForceSeq()+","+trip.getVrseq()+",'" + trip.getGeneratedBy() +"',0 , '','" + trip.getPer_capacity() + "', '" + trip.getPer_volume() + "','" + trip.getTot_capacity() + "', '" + trip.getTot_volume() + "','" + trip.getDoc_capacity() + "', '" + trip.getDoc_volume() + "','" + trip.getUom_capacity() + "', '" + trip.getUom_volume() + "' ,'"+trip.getAllocatedRouteCodes()+"' )";
             entityManager.createNativeQuery(sql).executeUpdate();
-			
-			  int sequenceNUm = 2;
-               if (null != tripVO.getTotalObject()) {
-                   String totalObj = mapper.writeValueAsString(tripVO.getTotalObject());
-                   Integer tripno = trip.getTrips();
-                   Map<String, Object> tripObj = mapper.readValue(totalObj, new TypeReference<Map<String, Object>>() {
-                   });
-                   String ttObj = mapper.writeValueAsString(tripObj.get("selectedTripData"));
-                   List<Map<String, Object>> totObj = mapper.readValue(ttObj, new TypeReference<List<Map<String, Object>>>() {
-                   });
-                   for (Map<String, Object> map : totObj) {
-                       if (map.size() <= 0) {
-                           continue;
-                       }
-                       String docType = null != map.get("doctype") ? map.get("doctype").toString() : "";
-                       int docNum = this.getDocType(docType);
-                       String dDate = (String) map.get("docdate");
-                       String vr = trip.getTripCode();
-                       String Veh_code = trip.getCode();
-                       Date ddDate = format.parse(dDate);
-                       Date selectedDate = format.parse(docDate);
-                       this.updateDocsAtTripCreation(vr, Veh_code, docDate, docNum, map.get("docnum").toString(),tripno, sequenceNUm, veh_licplate, routename);
-                       sequenceNUm ++;
-                   }
-               }
+
+            int sequenceNUm = 2;
+            if (null != tripVO.getTotalObject()) {
+                String totalObj = mapper.writeValueAsString(tripVO.getTotalObject());
+                Integer tripno = trip.getTrips();
+                Map<String, Object> tripObj = mapper.readValue(totalObj, new TypeReference<Map<String, Object>>() {
+                });
+                String ttObj = mapper.writeValueAsString(tripObj.get("selectedTripData"));
+                List<Map<String, Object>> totObj = mapper.readValue(ttObj, new TypeReference<List<Map<String, Object>>>() {
+                });
+                for (Map<String, Object> map : totObj) {
+                    if (map.size() <= 0) {
+                        continue;
+                    }
+                    String docType = null != map.get("doctype") ? map.get("doctype").toString() : "";
+                    int docNum = this.getDocType(docType);
+                    String dDate = (String) map.get("docdate");
+                    String vr = trip.getTripCode();
+                    String Veh_code = trip.getCode();
+                    Date ddDate = format.parse(dDate);
+                    Date selectedDate = format.parse(docDate);
+                    this.updateDocsAtTripCreation(vr, Veh_code, docDate, docNum, map.get("docnum").toString(),tripno, sequenceNUm, veh_licplate, routename);
+                    sequenceNUm ++;
+                }
+            }
             // }
 
             this.LoadTempTrip(tripVO, trip.getTripCode());
@@ -2806,11 +3307,11 @@ public class TransportService {
             TripVO tripVO = tripVOList.get(0);
             this.deletesingleTrip(tripVO.getItemCode());
         } catch (Exception e) {
-        e.printStackTrace();
+            e.printStackTrace();
+        }
     }
-}
 
-  public void UpdatedeletedDocument(List<DocsVO> docsList) {
+        public void UpdatedeletedDocument(List<DocsVO> docsList) {
         log.info("inside updatedelteddoc");
         try {
             if (docsList.size() > 0) {
